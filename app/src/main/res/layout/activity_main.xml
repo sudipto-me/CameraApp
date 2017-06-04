@@ -22,6 +22,7 @@
             android:textAllCaps="false"
             android:onClick="takePicture"/>
 
+
     </LinearLayout>
 
     <LinearLayout

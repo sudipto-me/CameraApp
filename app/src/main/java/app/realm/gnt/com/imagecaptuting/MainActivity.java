@@ -10,6 +10,7 @@ import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -47,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
       if(requestCode==0){
           if(grantResults.length>0 && grantResults[0] == PackageManager.PERMISSION_GRANTED
-                  && grantResults[1]==PackageManager.PERMISSION_DENIED){
+                  && grantResults[1]==PackageManager.PERMISSION_GRANTED){
 
               btn_takePictureButton.setEnabled(true);
           }
@@ -70,6 +71,8 @@ public class MainActivity extends AppCompatActivity {
 
         if(!mediaStorageDir.exists()){
             if(!mediaStorageDir.mkdirs()){
+
+                Log.d("CameraDemo", "failed to create directory");
                 return null;
             }
         }
@@ -81,7 +84,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(requestCode==100){
-            if(requestCode == RESULT_OK){
+            if(resultCode == RESULT_OK){
                 iv_takeImage.setImageURI(file);
             }
         }

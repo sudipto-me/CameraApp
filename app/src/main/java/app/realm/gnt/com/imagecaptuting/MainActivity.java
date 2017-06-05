@@ -1,8 +1,10 @@
 package app.realm.gnt.com.imagecaptuting;
 
 import android.Manifest;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -14,63 +16,81 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
 
-    String userChoosenTask,SELECT_FILE;
 
-    private Button btn_takePictureButton;
+    private Button btn_takePictureButton, btn_ChooseImageButton;
     private ImageView iv_takeImage;
     private Uri file;
+    private int mImage_Req = 1;
+    final int PIC_CROP = 2;
+    private Bitmap mBitmap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        btn_takePictureButton = (Button)findViewById(R.id.btn_Select_Photo);
-        iv_takeImage = (ImageView)findViewById(R.id.iv_Simple_ImageView);
+        btn_takePictureButton = (Button) findViewById(R.id.btn_Select_Photo);
+        btn_ChooseImageButton = (Button) findViewById(R.id.btn_Choose_Photo);
+        iv_takeImage = (ImageView) findViewById(R.id.iv_Simple_ImageView);
 
 
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED){
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
 
             btn_takePictureButton.setEnabled(false);
-            ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.CAMERA,Manifest.permission.READ_EXTERNAL_STORAGE},0);
+            btn_ChooseImageButton.setEnabled(false);
+
+
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
 
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-      if(requestCode==0){
-          if(grantResults.length>0 && grantResults[0] == PackageManager.PERMISSION_GRANTED
-                  && grantResults[1]==PackageManager.PERMISSION_GRANTED){
+        if (requestCode == 0) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                    && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
 
-              btn_takePictureButton.setEnabled(true);
-          }
-      }
+                btn_takePictureButton.setEnabled(true);
+                btn_ChooseImageButton.setEnabled(true);
+            }
+        }
     }
 
-    public void takePicture(View view){
+    public void takePicture(View view) {
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         file = Uri.fromFile(getOutputMediaFile());
-        intent.putExtra(MediaStore.EXTRA_OUTPUT,file);
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, file);
+        performCrop(file);
+        startActivityForResult(intent, mImage_Req);
 
-        startActivityForResult(intent,100);
 
     }
 
-    private  static File getOutputMediaFile() {
+    public void choosePicture(View view) {
+        Intent intent = new Intent();
+        intent.setType("image/*");
+        intent.setAction(Intent.ACTION_GET_CONTENT);
+        startActivityForResult(intent, mImage_Req);
+    }
+
+    public static File getOutputMediaFile() {
+
 
         File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES), "CameraDemo");
 
-        if(!mediaStorageDir.exists()){
-            if(!mediaStorageDir.mkdirs()){
+        if (!mediaStorageDir.exists()) {
+            if (!mediaStorageDir.mkdirs()) {
 
                 Log.d("CameraDemo", "failed to create directory");
                 return null;
@@ -78,80 +98,74 @@ public class MainActivity extends AppCompatActivity {
         }
 
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        return new File(mediaStorageDir.getPath()+File.separator+"IMG_"+timeStamp+".jpg");
+        return new File(mediaStorageDir.getPath() + File.separator + "IMG_" + timeStamp + ".jpg");
     }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if(requestCode==100){
-            if(resultCode == RESULT_OK){
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == mImage_Req && resultCode == RESULT_OK && data != null) {
+
+
+
+            try {
+                file = data.getData();
+                performCrop(file);
+                mBitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), file);
+                iv_takeImage.setImageBitmap(mBitmap);
+
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        if (requestCode == mImage_Req) {
+            if (resultCode == RESULT_OK) {
                 iv_takeImage.setImageURI(file);
             }
         }
-    }
 
-    /*
-    This function is for the dialog box.when the user click on Button"Select a Photo" this time a pop will come.
-    This pop will show which option the user wants such as:use camera
-    or take a image from gallery or cancel the process.
-     */
-
-    /*
-
-
-
-    private void selectImage(){
-
-        final CharSequence[] items = {"Take a photo","Choose from gallery","Cancel"};//this is the sequence of choices user wants
-
-        //alertdailog for the pop up
-        AlertDialog.Builder mbuilder = new AlertDialog.Builder(MainActivity.this);
-
-        mbuilder.setTitle("Add Photo");
-
-      mbuilder.setItems(items, new DialogInterface.OnClickListener() {
-          @Override
-          public void onClick(DialogInterface dialog, int item) {
-              boolean result = Utility.checkPermission(MainActivity.this);
-              if(items[item].equals("Take Photo")){
-                  userChoosenTask = "Take Photo";
-                  if(result){
-                      cameraIntent();
-                  }
-              }
-              else if(items[item].equals("Select From Gallery")){
-                  userChoosenTask = "Select From Gallery";
-                  if (result){
-                      galleryIntent();
-                  }
-              }
-              else if(items[item].equals("Cancel")){
-                  dialog.dismiss();
-              }
-          }
-      });
-        mbuilder.show();
-
+        if (requestCode == PIC_CROP) {
+            if (data != null) {
+                Bundle extras = data.getExtras();
+                Bitmap selectedBitmap = extras.getParcelable("data");
+                iv_takeImage.setImageBitmap(selectedBitmap);
+            }
+        }
 
 
     }
 
-    private void galleryIntent() {
 
-        Intent intent = new Intent();
-        intent.setType("images/*");
-        intent.setAction(Intent.ACTION_GET_CONTENT);
-        startActivityForResult(Intent.createChooser(intent,"Select File"), Integer.parseInt(SELECT_FILE));
+    public void performCrop(Uri picUri) {
+        try {
+            //call the standard crop action intent (the user device may not support it
+            Intent cropIntent = new Intent("com.android.camera.action.CROP");
+            //indicate image type and Uri
+            cropIntent.setDataAndType(picUri, "image/*");
+            //set crop properties
+            cropIntent.putExtra("crop", true);
+            //indicate aspect ratio fo crop
+            cropIntent.putExtra("aspectX", 1);
+            cropIntent.putExtra("asprctY", 1);
+            //
+            cropIntent.putExtra("outputX", 256);
+            cropIntent.putExtra("outputY", 256);
+
+            cropIntent.putExtra("return-data", true);
+
+            startActivityForResult(cropIntent, PIC_CROP);
+
+        } catch (ActivityNotFoundException anfe) {
+            String errorMessage = "Whoops - your device doesn't support the crop action!";
+            Toast toast = Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT);
+            toast.show();
+        }
+
     }
-
-    private void cameraIntent() {
-
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        startActivityForResult(intent, Integer.parseInt(CAMERA_SERVICE));//check this line
-    }
-    */
-
-
 
 
 }

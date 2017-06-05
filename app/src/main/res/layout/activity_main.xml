@@ -12,15 +12,24 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
+        android:orientation="vertical"
         android:padding="5dp">
 
         <Button
             android:id="@+id/btn_Select_Photo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Select a Photo"
+            android:text="Capture a Photo"
             android:textAllCaps="false"
             android:onClick="takePicture"/>
+
+        <Button
+            android:id="@+id/btn_Choose_Photo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Choose a Photo"
+            android:textAllCaps="false"
+            android:onClick="choosePicture" />
 
 
     </LinearLayout>
